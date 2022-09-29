@@ -15,7 +15,6 @@ contract TriangularFlashSwap {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    // Trade Variables
     uint256 private deadline = block.timestamp + 1 days;
     uint256 private constant MAX_INT =
         115792089237316195423570985008687907853269984665640564039457584007913129639935;
@@ -30,44 +29,6 @@ contract TriangularFlashSwap {
 
     function getTokenBalance(address _address) public view returns (uint256) {
         return IERC20(_address).balanceOf(address(this));
-    }
-
-    function placeTrade(
-        address _fromToken,
-        address _toToken,
-        uint256 _amountIn,
-        address _factory,
-        address _router
-    ) private returns (uint256) {
-        address pair = IUniswapV2Factory(_factory).getPair(
-            _fromToken,
-            _toToken
-        );
-
-        require(pair != address(0), "Pool for pair does not exist");
-
-        // Calculate amount out
-        address[] memory path = new address[](2);
-        path[0] = _fromToken;
-        path[1] = _toToken;
-
-        uint256 amountRequired = IUniswapV2Router01(_router).getAmountsOut(
-            _amountIn,
-            path
-        )[1];
-
-        // Perform arbitrage - Swap for another token
-        uint256 amountReceived = IUniswapV2Router01(_router)
-            .swapExactTokensForTokens(
-                _amountIn,
-                amountRequired,
-                path,
-                address(this),
-                deadline
-            )[1];
-
-        require(amountReceived > 0, "Aborted TX: Trade returned zero");
-        return amountReceived;
     }
 
     function startArbitrage(
@@ -188,6 +149,7 @@ contract TriangularFlashSwap {
             senderAddress,
             SafeMath.sub(receivedAmount, repayAmount)
         );
+
         payBackLoan(tokenBorrow, pair, repayAmount);
     }
 
@@ -224,6 +186,43 @@ contract TriangularFlashSwap {
         return trade3AquiredCoin;
     }
 
+    function placeTrade(
+        address _fromToken,
+        address _toToken,
+        uint256 _amountIn,
+        address _factory,
+        address _router
+    ) private returns (uint256) {
+        address pair = IUniswapV2Factory(_factory).getPair(
+            _fromToken,
+            _toToken
+        );
+
+        require(pair != address(0), "Pool for pair does not exist");
+
+        // Calculate amount out
+        address[] memory path = new address[](2);
+        path[0] = _fromToken;
+        path[1] = _toToken;
+
+        uint256 amountRequired = IUniswapV2Router01(_router).getAmountsOut(
+            _amountIn,
+            path
+        )[1];
+
+        uint256 amountReceived = IUniswapV2Router01(_router)
+            .swapExactTokensForTokens(
+                _amountIn,
+                amountRequired,
+                path,
+                address(this),
+                deadline
+            )[1];
+
+        require(amountReceived > 0, "Aborted TX: Trade returned zero");
+        return amountReceived;
+    }
+
     function getPair(address _sender, address _factory)
         private
         view
@@ -235,11 +234,11 @@ contract TriangularFlashSwap {
     }
 
     function getLoanAmount(uint256 _amount) private pure returns (uint256) {
-        uint256 res = SafeMath.mul(_amount, 3);
-        res = SafeMath.div(res, 977);
-        res = SafeMath.add(res, 1);
-        res = SafeMath.add(_amount, res);
-        return res;
+        return
+            SafeMath.add(
+                _amount,
+                SafeMath.add(SafeMath.div(SafeMath.mul(_amount, 3), 977), 1)
+            );
     }
 
     function payOut(
