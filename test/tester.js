@@ -8,14 +8,14 @@ const {
 const provider = ethers.provider;
 
 describe("Tringular Arbitrage Contract", () => {
-  const baseTokenAddress = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
-  const token0 = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
-  const token1 = "0x2c094F5A7D1146BB93850f629501eB749f6Ed491";
+  const baseTokenAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+  const token0 = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+  const token1 = "0x514910771AF9Ca656af840dff83E8264EcF986CA";
   const whaleAddress = "0xf977814e90da44bfa03b6295a0616a897441acec";
-  const dummyToken = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+  const dummyToken = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 
-  const factoryAddress = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73";
-  const routerAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+  const factoryAddress = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+  const routerAddress = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
   const borrowAmountHuman = "0.1";
   const initialFundungAmount = "100";
 

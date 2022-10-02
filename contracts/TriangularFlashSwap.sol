@@ -161,29 +161,29 @@ contract TriangularFlashSwap {
         address _factory,
         address _router
     ) private returns (uint256) {
-        uint256 trade1AquiredCoin = placeTrade(
+        uint256 trade1AcquiredCoin = placeTrade(
             _tokenBorrow,
             _token0,
             _loanAmount,
             _factory,
             _router
         );
-        uint256 trade2AquiredCoin = placeTrade(
+        uint256 trade2AcquiredCoin = placeTrade(
             _token0,
             _token1,
-            trade1AquiredCoin,
+            trade1AcquiredCoin,
             _factory,
             _router
         );
-        uint256 trade3AquiredCoin = placeTrade(
+        uint256 trade3AcquiredCoin = placeTrade(
             _token1,
             _tokenBorrow,
-            trade2AquiredCoin,
+            trade2AcquiredCoin,
             _factory,
             _router
         );
 
-        return trade3AquiredCoin;
+        return trade3AcquiredCoin;
     }
 
     function placeTrade(
@@ -205,7 +205,7 @@ contract TriangularFlashSwap {
         path[0] = _fromToken;
         path[1] = _toToken;
 
-        uint256 amountRequired = IUniswapV2Router01(_router).getAmountsOut(
+        uint256 amountRecquired = IUniswapV2Router01(_router).getAmountsOut(
             _amountIn,
             path
         )[1];
@@ -213,7 +213,7 @@ contract TriangularFlashSwap {
         uint256 amountReceived = IUniswapV2Router01(_router)
             .swapExactTokensForTokens(
                 _amountIn,
-                amountRequired,
+                amountRecquired,
                 path,
                 address(this),
                 deadline
