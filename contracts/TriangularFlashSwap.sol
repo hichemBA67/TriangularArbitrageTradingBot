@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.6;
 
-import "hardhat/console.sol";
 import "./libraries/UniswapV2Library.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
