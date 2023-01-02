@@ -16,6 +16,7 @@ describe("Tringular Arbitrage Contract", () => {
 
   const factoryAddress = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
   const routerAddress = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+  const quoterAddress = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
   const borrowAmountHuman = "0.1";
   const initialFundungAmount = "100";
 
@@ -73,7 +74,8 @@ describe("Tringular Arbitrage Contract", () => {
         token1,
         factoryAddress,
         routerAddress,
-        dummyToken
+        dummyToken,
+        quoterAddress
       );
 
       assert(txArbitrage);

@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.6;
+pragma solidity >=0.7.5;
 
-import "./libraries/UniswapV2Library.sol";
+import "hardhat/console.sol";
+
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
-import "./interfaces/IUniswapV2Factory.sol";
-import "./interfaces/IUniswapV2Pair.sol";
-import "./interfaces/IUniswapV2Router01.sol";
-import "./interfaces/IUniswapV2Router02.sol";
 import "./interfaces/IERC20.sol";
+
+// V3
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
 contract TriangularFlashSwap {
     using SafeERC20 for IERC20;
@@ -37,7 +40,8 @@ contract TriangularFlashSwap {
         address _token1,
         address _factory,
         address _router,
-        address _dummyToken
+        address _dummyToken,
+        address _quoter
     ) external {
         require(
             _tokenBorrow != address(0),
@@ -53,15 +57,16 @@ contract TriangularFlashSwap {
         IERC20(_token0).safeApprove(address(_router), MAX_INT);
         IERC20(_token1).safeApprove(address(_router), MAX_INT);
 
-        address pair = IUniswapV2Factory(_factory).getPair(
+        address pool = IUniswapV3Factory(_factory).getPool(
             _tokenBorrow,
-            _dummyToken
+            _dummyToken,
+            500
         );
 
-        require(pair != address(0), "Pool for selected pair does not exist");
+        require(pool != address(0), "Pool for selected pair does not exist");
 
-        address token0 = IUniswapV2Pair(pair).token0();
-        address token1 = IUniswapV2Pair(pair).token1();
+        address token0 = IUniswapV3Pool(pool).token0();
+        address token1 = IUniswapV3Pool(pool).token1();
         uint256 amount0Out = _tokenBorrow == token0 ? _amount : 0;
         uint256 amount1Out = _tokenBorrow == token1 ? _amount : 0;
 
@@ -72,34 +77,22 @@ contract TriangularFlashSwap {
             _token0,
             _token1,
             _factory,
-            _router
+            _router,
+            _quoter
         );
 
-        IUniswapV2Pair(pair).swap(amount0Out, amount1Out, address(this), data);
+        IUniswapV3Pool(pool).flash(address(this), amount0Out, amount1Out, data);
     }
 
-    function pancakeCall(
-        address _sender,
+    function uniswapV3FlashCallback(
         uint256 _amount0,
         uint256 _amount1,
-        bytes calldata _data
+        bytes calldata data
     ) external {
-        bytes memory data = _data;
-        executeArbitrage(_sender, _amount0, _amount1, data);
-    }
-
-    function uniswapV2Call(
-        address _sender,
-        uint256 _amount0,
-        uint256 _amount1,
-        bytes calldata _data
-    ) external {
-        bytes memory data = _data;
-        executeArbitrage(_sender, _amount0, _amount1, data);
+        executeArbitrage(_amount0, _amount1, data);
     }
 
     function executeArbitrage(
-        address _sender,
         uint256 _amount0,
         uint256 _amount1,
         bytes memory _data
@@ -111,19 +104,20 @@ contract TriangularFlashSwap {
             address token0,
             address token1,
             address factory,
-            address router
+            address router,
+            address quoter
         ) = abi.decode(
                 _data,
                 (address, uint256, address, address, address, address, address)
             );
 
-        address pair = getPair(msg.sender, factory);
+        address pool = getPool(msg.sender, factory);
 
-        require(msg.sender == pair, "Pair contract didn't execute arbitrage.");
-        require(
-            _sender == address(this),
-            "Initiater didn't match this contract."
-        );
+        require(msg.sender == pool, "Pair contract didn't execute arbitrage.");
+        // require(
+        //     _sender == address(this),
+        //     "Initiater didn't match this contract."
+        // );
 
         uint256 repayAmount = getLoanAmount(amount);
 
@@ -135,21 +129,22 @@ contract TriangularFlashSwap {
             token1,
             loanAmount,
             factory,
-            router
+            router,
+            quoter
         );
 
-        require(
-            checkProfitability(repayAmount, receivedAmount),
-            "Arbitrage not profitable. Transaction reverted."
-        );
+        // require(
+        //     checkProfitability(repayAmount, receivedAmount),
+        //     "Arbitrage not profitable. Transaction reverted."
+        // );
 
-        payOut(
-            tokenBorrow,
-            senderAddress,
-            SafeMath.sub(receivedAmount, repayAmount)
-        );
+        // payOut(
+        //     tokenBorrow,
+        //     senderAddress,
+        //     SafeMath.sub(receivedAmount, repayAmount)
+        // );
 
-        payBackLoan(tokenBorrow, pair, repayAmount);
+        // payBackLoan(tokenBorrow, pair, repayAmount);
     }
 
     function executeTriangularTrades(
@@ -158,31 +153,36 @@ contract TriangularFlashSwap {
         address _token1,
         uint256 _loanAmount,
         address _factory,
-        address _router
+        address _router,
+        address _quoter
     ) private returns (uint256) {
         uint256 trade1AcquiredCoin = placeTrade(
             _tokenBorrow,
             _token0,
             _loanAmount,
             _factory,
-            _router
+            _router,
+            _quoter
         );
-        uint256 trade2AcquiredCoin = placeTrade(
-            _token0,
-            _token1,
-            trade1AcquiredCoin,
-            _factory,
-            _router
-        );
-        uint256 trade3AcquiredCoin = placeTrade(
-            _token1,
-            _tokenBorrow,
-            trade2AcquiredCoin,
-            _factory,
-            _router
-        );
+        // uint256 trade2AcquiredCoin = placeTrade(
+        //     _token0,
+        //     _token1,
+        //     trade1AcquiredCoin,
+        //     _factory,
+        //     _router,
+        //     _quoter
+        // );
+        // uint256 trade3AcquiredCoin = placeTrade(
+        //     _token1,
+        //     _tokenBorrow,
+        //     trade2AcquiredCoin,
+        //     _factory,
+        //     _router,
+        //     _quoter
+        // );
 
-        return trade3AcquiredCoin;
+        // return trade3AcquiredCoin;
+        return 0;
     }
 
     function placeTrade(
@@ -190,46 +190,54 @@ contract TriangularFlashSwap {
         address _toToken,
         uint256 _amountIn,
         address _factory,
-        address _router
+        address _router,
+        address _quoter
     ) private returns (uint256) {
-        address pair = IUniswapV2Factory(_factory).getPair(
+        address pool = IUniswapV3Factory(_factory).getPool(
             _fromToken,
-            _toToken
+            _toToken,
+            500
         );
 
-        require(pair != address(0), "Pool for pair does not exist");
+        require(pool != address(0), "Pool for pair does not exist");
 
         // Calculate amount out
         address[] memory path = new address[](2);
         path[0] = _fromToken;
         path[1] = _toToken;
 
-        uint256 amountRecquired = IUniswapV2Router01(_router).getAmountsOut(
+        uint256 amountRecquired = IQuoterV2(_quoter).quoteExactInputSingle(
+            path[0],
+            path[1],
+            500,
             _amountIn,
-            path
-        )[1];
+            0
+        );
 
-        uint256 amountReceived = IUniswapV2Router01(_router)
-            .swapExactTokensForTokens(
-                _amountIn,
-                amountRecquired,
-                path,
-                address(this),
-                deadline
-            )[1];
+        console.log(amountRecquired);
 
-        require(amountReceived > 0, "Aborted TX: Trade returned zero");
-        return amountReceived;
+        // uint256 amountReceived = IUniswapV2Router01(_router)
+        //     .swapExactTokensForTokens(
+        //         _amountIn,
+        //         amountRecquired,
+        //         path,
+        //         address(this),
+        //         deadline
+        //     )[1];
+
+        // require(amountReceived > 0, "Aborted TX: Trade returned zero");
+        // return amountReceived;
+        return 0;
     }
 
-    function getPair(address _sender, address _factory)
+    function getPool(address _sender, address _factory)
         private
         view
         returns (address)
     {
-        address token0Pair = IUniswapV2Pair(_sender).token0();
-        address token1Pair = IUniswapV2Pair(_sender).token1();
-        return IUniswapV2Factory(_factory).getPair(token0Pair, token1Pair);
+        address token0Pair = IUniswapV3Pool(_sender).token0();
+        address token1Pair = IUniswapV3Pool(_sender).token1();
+        return IUniswapV3Factory(_factory).getPool(token0Pair, token1Pair, 500);
     }
 
     function getLoanAmount(uint256 _amount) private pure returns (uint256) {
